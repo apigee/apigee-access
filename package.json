@@ -1,14 +1,14 @@
 {
-  "name": "apigee-extensions",
+  "name": "apigee-access",
   "version": "0.1.0",
-  "description": "Gives access to Apigee-specific data for Node.js apps",
+  "description": "Gives access to Apigee-specific functionality for Node.js apps",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/apigee/apigee-node-extensions.git"
+    "url": "git://github.com/apigee/apigee-access.git"
   },
   "keywords": [
     "apigee"
@@ -16,7 +16,7 @@
   "author": "gbrail <greg@apigee.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/apigee/apigee-node-extensions/issues"
+    "url": "https://github.com/apigee/apigee-access/issues"
   },
-  "homepage": "https://github.com/apigee/apigee-node-extensions"
+  "homepage": "https://github.com/apigee/apigee-access"
 }

@@ -43,6 +43,10 @@
          svr.close();
      });
      
+     it('Mode', function() {
+         assert.equal(apigee.getMode(), 'standalone');
+     });
+     
      it('Set Get', function(done) {
          sendRequest('/setget', function(resp) {
              assert.equal(resp.statusCode, 200);
@@ -73,53 +77,43 @@
  });
  
  function handleRequest(req, resp) {
-   var ctx = apigee.getContext(req);
    
    if (req.url === '/setget') {
-     assert(!ctx.variables.testone);
-     ctx.variables.testone = 'Foo';
-     assert.equal(ctx.variables.testone, 'Foo');
-     
+     assert(!apigee.getVariable(req, 'testone'));
+     apigee.setVariable(req, 'testone', 'Foo');
      assert.equal(apigee.getVariable(req, 'testone'), 'Foo');
      
    } else if (req.url === '/setgetsetget') {
-     assert(!ctx.variables['test2']);
-     ctx.variables['test2'] = 'Foo';
-     assert.equal(ctx.variables['test2'], 'Foo');
-     
-     var ctx2 = apigee.getContext(req);
-     assert.equal(ctx2.variables['test2'], 'Foo');
-     ctx2.variables['test2'] = 'Bar';
-     assert.equal(ctx2.variables['test2'], 'Bar');
-     assert.equal(ctx.variables['test2'], 'Bar');
+     assert(!apigee.getVariable(req, 'test2'));
+     apigee.setVariable(req, 'test2', 'Foo');
+     assert.equal(apigee.getVariable(req, 'test2'), 'Foo');
      
      apigee.setVariable(req, 'test2', 'Baz');
      assert.equal(apigee.getVariable(req, 'test2'), 'Baz');
      
    } else if (req.url === '/delete') {
-     assert(!ctx.variables.testhree);
-     ctx.variables.testthree = 'Foo';
-     assert.equal(ctx.variables.testthree, 'Foo');
-     delete ctx.variables.testthree;
-     assert(!ctx.variables.testhree);
-     
-     apigee.setVariable(ctx, 'test4', 'Bar');
-     assert.equal(apigee.getVariable(ctx, 'test4'), 'Bar');
-     apigee.deleteVariable(ctx, 'test4');
-     assert(!apigee.getVariable(ctx, 'test4'));
-     
-   } else if (req.url === '/predefined') {
-     assert(ctx.variables['client.received.start.timestamp']);
-     assert.equal(typeof ctx.variables['client.received.start.timestamp'], 'number');
-     assert(ctx.variables['client.received.end.timestamp']);
-     assert.equal(typeof ctx.variables['client.received.end.timestamp'], 'number');
-     assert(ctx.variables['client.received.start.time']);
-     assert.equal(typeof ctx.variables['client.received.start.time'], 'string');
-     assert(ctx.variables['client.received.end.time']);
-     assert.equal(typeof ctx.variables['client.received.end.time'], 'string');
+     assert(!apigee.getVariable(req, 'testthree'));
+     apigee.setVariable(req, 'testthree', 'Foo');
+     assert.equal(apigee.getVariable(req, 'testthree'), 'Foo');
+     apigee.deleteVariable(req, 'testthree');
+     assert(!apigee.getVariable(req, 'testthree'));
      
      assert.throws(function() {
-         ctx.variables['client.received.end.time'] = 'Invalid';
+       apigee.deleteVariable(req, 'client.received.start.timestamp', 'Invalid');
+     });
+     
+   } else if (req.url === '/predefined') {
+     assert(apigee.getVariable(req, 'client.received.start.timestamp'));
+     assert(apigee.getVariable(req, 'client.received.end.timestamp'));
+     assert(apigee.getVariable(req, 'client.received.start.time'));
+     assert(apigee.getVariable(req, 'client.received.end.time'));
+     assert.equal(typeof apigee.getVariable(req, 'client.received.start.timestamp'), 'number');
+     assert.equal(typeof apigee.getVariable(req, 'client.received.end.timestamp'), 'number');
+     assert.equal(typeof apigee.getVariable(req, 'client.received.start.time'), 'string');
+     assert.equal(typeof apigee.getVariable(req, 'client.received.end.time'), 'string');
+     
+     assert.throws(function() {
+         apigee.setVariable(req, 'client.received.start.timestamp', 'Invalid');
      });
    
    } else {
