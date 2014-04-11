@@ -38,14 +38,26 @@ describe('Apigee Access Cache', function() {
         });  
     });
     
-    it('String Encoding', function(done) {
+    it('Cache String', function(done) {
         var cache = apigee.getCache();
-        cache.put('key', 'Hello3', 'ascii', function(err) {
+        cache.put('key', 'Hello3', function(err) {
           assert(!err);
-          cache.setEncoding('ascii');
           cache.get('key', function(err, val) {
             assert(!err);
             assert.equal(val, 'Hello3');
+            done();
+          });
+        });  
+    });
+    
+    it('Cache Buffer', function(done) {
+        var cache = apigee.getCache();
+        var buf = new Buffer('Hello3', 'ascii');
+        cache.put('key', buf, function(err) {
+          assert(!err);
+          cache.get('key', function(err, val) {
+            assert(!err);
+            assert.deepEqual(val, buf);
             done();
           });
         });  
@@ -56,7 +68,6 @@ describe('Apigee Access Cache', function() {
         var obj = { foo: 123, bar: 'Baz', tweety: true };
         cache.put('key', obj, function(err) {
           assert(!err);
-          cache.setEncoding('utf8');
           cache.get('key', function(err, val) {
             assert(!err);
             var result = JSON.parse(val);
@@ -70,7 +81,6 @@ describe('Apigee Access Cache', function() {
         var cache = apigee.getCache();
         cache.put('key', 'Hello2', 1000, function(err) {
           assert(!err);
-          cache.setEncoding('ascii');
           cache.get('key', function(err, val) {
             assert(!err);
             assert.equal(val, 'Hello2');
@@ -81,9 +91,8 @@ describe('Apigee Access Cache', function() {
     
     it('TTL 2', function(done) {
         var cache = apigee.getCache();
-        cache.put('key', 'Hello4', 'ascii', 1000, function(err) {
+        cache.put('key', 'Hello4', 1000, function(err) {
           assert(!err);
-          cache.setEncoding('ascii');
           cache.get('key', function(err, val) {
             assert(!err);
             assert.equal(val, 'Hello4');

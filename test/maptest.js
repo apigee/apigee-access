@@ -25,17 +25,60 @@
 var apigee = require('..');
 var assert = require('assert');
 
+var map;
+
+before(function() {
+    map = apigee.getMap('foo');
+});
+
 describe('Apigee Access Map', function() {
     it('Default Map', function(done) {
-        var map = apigee.getMap('foo');
-        map.put('key', 'Hello', function(err) {
+        var data1 = 'Hello, Key Value World!';
+        map.put('key', data1, function(err) {
           assert(!err);
           map.get('key', function(err, val) {
             assert(!err);
-            assert.equal(val, 'Hello');
+            assert.equal(val, data1);
             done();
           });
         });  
+    });
+    it('Empty Map', function(done) {
+        map.get('notFoundKey', function(err, val) {
+            assert(!err);
+            assert.equal(val, undefined);
+            done();
+        });
+    });
+    it('Remove', function(done) {
+        var data2 = 'Goodbye, World!';
+        map.put('key2', data2, function(err) {
+          assert(!err);
+          map.get('key2', function(err, val) {
+            assert(!err);
+            assert.equal(val, data2);
+            map.remove('key2', function(err) {
+                assert(!err);
+                map.get('key2', function(err, data) {
+                    assert(!err);
+                    assert.equal(data, undefined);
+                    done();
+                });
+            });
+          });
+        });
+    });
+    it('Invalid Data', function() {
+        var badData = { one: 'Two', three: { four: 'four' }};
+        assert.throws(function() {
+            map.put('badData', badData);
+        });
+    });
+    it('Invalid Key', function() {
+        var d = { one: 1 };
+        assert.throws(function() {
+            map.put(123, d);
+        });
     });
 });
 

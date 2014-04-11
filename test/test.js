@@ -61,6 +61,13 @@
          });
      });
      
+     it('Set Get Int', function(done) {
+         sendRequest('/setgetint', function(resp) {
+             assert.equal(resp.statusCode, 200);
+             done();
+         });
+     });
+     
      it('Delete', function(done) {
          sendRequest('/delete', function(resp) {
              assert.equal(resp.statusCode, 200);
@@ -82,6 +89,15 @@
      assert(!apigee.getVariable(req, 'testone'));
      apigee.setVariable(req, 'testone', 'Foo');
      assert.equal(apigee.getVariable(req, 'testone'), 'Foo');
+     
+   } else if (req.url === '/setgetint') {
+     assert(!apigee.getVariable(req, 'testint'));
+     apigee.setIntVariable(req, 'testint', 1);
+     assert.equal(apigee.getVariable(req, 'testint'), 1);
+     apigee.setIntVariable(req, 'testint2', 1.1);
+     assert.equal(apigee.getVariable(req, 'testint2'), 1);
+     apigee.setIntVariable(req, 'testint3', '123');
+     assert.equal(apigee.getVariable(req, 'testint3'), 123);
      
    } else if (req.url === '/setgetsetget') {
      assert(!apigee.getVariable(req, 'test2'));

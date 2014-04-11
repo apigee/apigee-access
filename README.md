@@ -112,7 +112,7 @@ standard Node.js HTTP request objects, such as timestamps on the message.
 
 ### Getting a variable
 
-    var apigee = require('apigee-extensions');
+    var apigee = require('apigee-access');
     // "httpRequest" must be a request object that came from the http module
     var val1 = apigee.getVariable(request, 'TestVariable');
     var val2 = apigee.getVariable(request, 'request.client.ip');
@@ -122,11 +122,23 @@ standard Node.js HTTP request objects, such as timestamps on the message.
 Some variables are read-only -- an exception will be thrown if you try
 to set one of them.
 
-    var apigee = require('apigee-extensions');
+    var apigee = require('apigee-access');
     // "httpRequest" must be a request object that came from the http module
     apigee.setVariable(request, 'TestVariable', 'bar');
     // This will throw an exception
     apigee.setVariable(request, 'client.ip', 'Invalid');
+   
+For each variable, the key must be a string. The value may be a number, String,
+boolean, null, or undefined.
+
+### Setting an integer variable
+
+    var apigee = require('apigee-access');
+    // Convert "123" to an integer and set it
+    apigee.setIntVariable(request, 'TestVariable', '123');
+    
+"setIntVariable" is a convenience method that first coerces "value" to an 
+integer, and then sets it. "value" must be a string or number.
 
 ### Deleting a variable
 
@@ -188,53 +200,52 @@ inside Node.js.
 
     var apigee = require('apigee-access');
     // Get access to the default cache, which is best for most purposes
-    var cache = apigee.getCache();
+    // The cache still needs a name
+    var cache = apigee.getCache('cache');
     // Get access to a custom cache resource
-    var customCache = apigee.getCache('MyCustomCache');
+    var customCache = apigee.getCache('MyCustomCache',
+      { resource: 'MyCustomrResource'} ); 
     
 To use a cache, call "getCache". This takes an optional argument -- if it
 is called with no parameter, it returns a default cache. You can also
 specify the name of a "cache resource," which is something that you can create
-using the Apigee API.
-    
-### Retrieving an item as a Buffer
+using the Apigee API. If the cache does not exist, it will be created.
 
-    var apigee = require('apigee-access');
-    var cache = apigee.getCache();
-    cache.get('key', function(data) {
-      // "data" is the item that was retrieved
-      // It will be a Buffer.
-    });
-    
-To retrieve an item, call the "get" function. It takes one parameter, which
-is a key. The key can be any string that you like.
+When accessing or creating a cache, you can also pass an object as the
+second parameter. It may contain the following optional parameters:
 
-Regardless of how an item was inserted, it is returned as a Buffer object
-unless "setEncoding" was called, as shown below.
+* resource: The name of an Apigee "cache resource" where the data should
+be stored. Cache resources are configured using the Apigee API. If not
+specified, a default resource will be used.
+* scope: Specifies whether cache entries are prefixed to prevent collisions.
+Valid values are "global", "application," and "exclusive". These are
+defined below.
+* defaultTtl: Specifies the default time to live for a cache entry, in
+seconds. If not specified then the default TTL in the cache resource
+will be used.
+* timeout: How long to wait to fetch a result from the distributed cache,
+in seconds. The default 30 seconds.
 
-### Retrieving an item as a String
+Cache scopes work as follows:
 
-    var apigee = require('apigee-access');
-    var cache = apigee.getCache();
-    cache.setEncoding('utf8');
-    cache.get('key', function(data) {
-      // "data" is the item that was retrieved
-      // It will be a String.
-    });
-    
-When "setEncoding" is set on a cache, all items will be retrieved as
-a String, interpreted using the specified encoding.
+* global: All cache entries may be seen by all Node.js applications in the same
+Apigee "environment."
+* application: All cache entries may be seen by all Node.js caches that
+are part of the same Apigee Edge application.
+* exclusive: Cache entries are only seen by Node.js caches in the same
+application that have the same name.
+
+
+The default scope is "exclusive."
     
 ### Inserting or Replacing an item
 
     var apigee = require('apigee-access');
     var cache = apigee.getCache();
-    // Insert a String with 'ascii' encoding and expiration
-    cache.put('key', 'Hello, World!', 'ascii', 10000);
+    // Insert a String with 'ascii' encoding and TTL in seconds
+    cache.put('key', 'Hello, World!', 'ascii', 120);
     // Insert a string with default (UTF8) encoding
     cache.put('key2', 'Hello, World!');
-    // Insert an object
-    cache.put('key3', { foo: 123, bar:456 });
     // Insert a string and get notified when insert is complete
     cache.put('key4', 'Hello, World!', function(err) {
       // "err" will be undefined unless there was an error on insert
@@ -242,21 +253,38 @@ a String, interpreted using the specified encoding.
     
 Each item in the cache consists of a key and some data. 
 
-Data items may be Strings, Buffers, or objects. Items are handled
-as follows:
-
-* If the item is a String, then it is converted to a Buffer and stored
-in the cache. If the third argument to "put" is a string, then it is treated 
-as the string encoding to use for the conversion -- otherwise, UTF-8 is
-used.
-* If the item is a Buffer, then it is put directly in the cache.
-* If the item is an Object, then it is serialized into a JSON string and
-inserted in the cache using UTF-8 encoding.
-* Otherwise, an Error is thrown.
+Data items may be Strings or Buffers. It is an error to insert any other
+data type.
 
 To be notified when the insert completes, and whether it is successful, pass
 a function as the last argument. If there is an error, then the first
 parameter will be an Error object.
+
+### Retrieving an item 
+
+    var apigee = require('apigee-access');
+    var cache = apigee.getCache();
+    cache.get('key', function(err, data) {
+      // If there was an error, then "err" will be set
+      // "data" is the item that was retrieved
+      // It will be a Buffer or a String depending on what was inserted..
+    });
+    
+To retrieve an item, call the "get" function. It takes one parameter, which
+is the key that was used during "put". 
+
+The callback must be a function that takes two parameters:
+
+The first is an error -- if there is an error while retrieving from the 
+cache, then an Error object will be set here and otherwise this parameter
+will be set to "undefined".
+
+
+The second is the data retrieved, if any. It will be one of three values:
+
+* If a String was inserted, it will be a String.
+* If a Buffer was inserted, it will be a Buffer.
+* If nothing was found, then it will be "undefined".
 
 ### Invalidating an Item
 
@@ -281,44 +309,63 @@ more quickly.
 
 Outside Apigee, the key-value map is simply kept in memory.
 
-The key-value map in Apigee is a very simple thing. Unlike the cache, which
-stores Buffer objects internally, the key-value map only stores Strings,
-and maps of strings, represented as one-dimensional JSON objects.
+The key-value map in Apigee is designed to store simple objects. 
+Each item consists of two things: a key, and a string.
 
 ### Accessing a KVM
 
     var apigee = require('apigee-access');
     // Get access to a specific KVM
-    var kvm = apigee.getMap('name');
+    var kvm = apigee.getMap('name', config);
 
 To access a KVM, call "getMap," and pass a name. If the specified map
 does not exist, then it will be created.
+
+The second argument of "getMap" can be an object that specifies additional
+properties. The supported properties are:
+
+* scope: Specifies whether cache entries are prefixed to prevent collisions.
+Valid values are "global", "application," and "exclusive". These are
+defined below.
+
+Scopes work as follows:
+
+* global: All cache entries may be seen by all Node.js applications in the same
+Apigee "environment."
+* application: All cache entries may be seen by all Node.js caches that
+are part of the same Apigee Edge application.
+* exclusive: Cache entries are only seen by Node.js caches in the same
+application that have the same name.
     
 ### Retrieving an item
 
     var apigee = require('apigee-access');
     var kvm = apigee.getMap('name');
-    kvm.get('key', function(data) {
+    kvm.get('key', function(err, data) {
       // "data" is the item that was retrieved
       // It will be a String.
+      // If there was an error, then 'err' will contain it
+      // If the item is not found, it will be "undefined".
     });
     
 To retrieve an item, call the "get" function. It takes one parameter, which
 is a key. The key can be any string that you like.
+
+The callback must have two parameters: The first is an Error object -- if
+there was an error retrieving the data, then it will be set, and otherwise
+it will be "undefined." 
+
+The second parameter is the string that was retrieved.
     
 ### Inserting or Replacing an item
 
     var apigee = require('apigee-access');
     var kvm = apigee.getMap('name');
-    // Insert a String with 'ascii' encoding
-    kvm.put('key', 'Hello, World!', 'ascii');
-    // Insert a string with default (UTF8) encoding
-    cache.put('key2', 'Hello, World!');
+    // Insert a String
+    kvm.put('key', 'Test Value');
     
-Each item in the cache consists of a key and some data. 
-
-The data item must also be a String. If it is not a String, 
-then an error will be thrown.
+Each item in the cache consists of a key and some data. The key
+and the data must each be a string.
 
 ### Removing an Item
 
