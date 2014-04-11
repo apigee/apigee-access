@@ -7,7 +7,6 @@ may be accessed:
 * Accessing and modifying "flow variables" within the Apigee message
 context.
 * Using the built-in distributed cache.
-* Using the built-in key-value map.
 
 This module is intended
 to be used when deploying a Node.js program to the Apigee Edge product
@@ -46,8 +45,6 @@ to this module, and variables added or modified by this module are visible
 to subsequent policies.
 * *Cache*: Items placed in the cache are visible to all instances of the
 application deployed to Apigee Edge.
-* *Key-Value Map*: Items placed in the key-value map are visible to all
-instances of the application deployed to Apigee Edge.
 
 ## Behavior when Running Outside Apigee
 
@@ -56,8 +53,6 @@ application. A (small) set of pre-defined variables is also populated for
 testing.
 * *Cache*: Items in the cache are only visible to the current Node.js 
 application.
-* *Key-Value Map*: Items in the key-value map are only visible to the current
-Node.js application, and they are not persisted to disk.
 
 When creating an API proxy in Apigee, it is common to set
 variables that can be used to pass information from one policy to the next.
@@ -88,7 +83,6 @@ The module supports the following functions:
     setVariable(request, name, value);
     deleteVariable(request, name);
     getCache(name);
-    getMap(name);
     getMode();
    
 And the following constant properties:
@@ -291,87 +285,6 @@ The second is the data retrieved, if any. It will be one of three values:
     var apigee = require('apigee-access');
     var cache = apigee.getCache();
     cache.remove('key');
-    
-## Key-Value Map
-
-The key-value map is a persistent store of keys and values. 
-
-Within Apigee Edge, a key-value map is a database that is available to all
-instances of the application running inside Apigee. A key-value map is very
-similar to a cache, but it has a few differences:
-
-* Data never expires from a KVM, and it is never purged because the KVM
-is full.
-* Data is always persistent in the KVM, regardless of changes in the 
-infrastructure or service failures.
-* Changes to data in the KVM, and removals of data items, may propagate
-more quickly.
-
-Outside Apigee, the key-value map is simply kept in memory.
-
-The key-value map in Apigee is designed to store simple objects. 
-Each item consists of two things: a key, and a string.
-
-### Accessing a KVM
-
-    var apigee = require('apigee-access');
-    // Get access to a specific KVM
-    var kvm = apigee.getMap('name', config);
-
-To access a KVM, call "getMap," and pass a name. If the specified map
-does not exist, then it will be created.
-
-The second argument of "getMap" can be an object that specifies additional
-properties. The supported properties are:
-
-* scope: Specifies whether cache entries are prefixed to prevent collisions.
-Valid values are "global", "application," and "exclusive". These are
-defined below.
-
-Scopes work as follows:
-
-* global: All cache entries may be seen by all Node.js applications in the same
-Apigee "environment."
-* application: All cache entries may be seen by all Node.js caches that
-are part of the same Apigee Edge application.
-* exclusive: Cache entries are only seen by Node.js caches in the same
-application that have the same name.
-    
-### Retrieving an item
-
-    var apigee = require('apigee-access');
-    var kvm = apigee.getMap('name');
-    kvm.get('key', function(err, data) {
-      // "data" is the item that was retrieved
-      // It will be a String.
-      // If there was an error, then 'err' will contain it
-      // If the item is not found, it will be "undefined".
-    });
-    
-To retrieve an item, call the "get" function. It takes one parameter, which
-is a key. The key can be any string that you like.
-
-The callback must have two parameters: The first is an Error object -- if
-there was an error retrieving the data, then it will be set, and otherwise
-it will be "undefined." 
-
-The second parameter is the string that was retrieved.
-    
-### Inserting or Replacing an item
-
-    var apigee = require('apigee-access');
-    var kvm = apigee.getMap('name');
-    // Insert a String
-    kvm.put('key', 'Test Value');
-    
-Each item in the cache consists of a key and some data. The key
-and the data must each be a string.
-
-### Removing an Item
-
-    var apigee = require('apigee-access');
-    var cache = apigee.getCache();
-    cache.delete('key');
     
 ## Determining the Deployment Mode
 
