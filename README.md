@@ -152,7 +152,7 @@ You may of course add your own variables with your own names.
 
 The list of variables may be found here:
 
-[http://apigee.com/docs/api-services/api/variables-reference]
+(http://apigee.com/docs/api-services/api/variables-reference)[http://apigee.com/docs/api-services/api/variables-reference]
 
 ## Running Outside Apigee
 
@@ -200,17 +200,17 @@ inside Node.js.
     var customCache = apigee.getCache('MyCustomCache',
       { resource: 'MyCustomrResource'} ); 
     
-To use a cache, call "getCache". This takes an optional argument -- if it
-is called with no parameter, it returns a default cache. You can also
-specify the name of a "cache resource," which is something that you can create
-using the Apigee API. If the cache does not exist, it will be created.
+To use a cache, call "getCache". This takes a name, and an optional
+configuration object.
 
-When accessing or creating a cache, you can also pass an object as the
-second parameter. It may contain the following optional parameters:
+The configuration object may be empty, or it may contain the following
+optional parameters:
 
 * resource: The name of an Apigee "cache resource" where the data should
-be stored. Cache resources are configured using the Apigee API. If not
-specified, a default resource will be used.
+be stored. Cache resources are used to fine-tune memory allocation and
+other cache parameters. These are configured using the Apigee API. If not
+specified, a default resource will be used. If the cache resource
+does not exist, then an error will be thrown.
 * scope: Specifies whether cache entries are prefixed to prevent collisions.
 Valid values are "global", "application," and "exclusive". These are
 defined below.
@@ -218,9 +218,11 @@ defined below.
 seconds. If not specified then the default TTL in the cache resource
 will be used.
 * timeout: How long to wait to fetch a result from the distributed cache,
-in seconds. The default 30 seconds.
+in seconds. The default 30 seconds. Latency-sensitive applications may
+wish to reduce this in order to prevent slow response times if the
+cache infrastructure is overloaded.
 
-Cache scopes work as follows:
+The following values are valid for the "scope" field:
 
 * global: All cache entries may be seen by all Node.js applications in the same
 Apigee "environment."
@@ -228,7 +230,6 @@ Apigee "environment."
 are part of the same Apigee Edge application.
 * exclusive: Cache entries are only seen by Node.js caches in the same
 application that have the same name.
-
 
 The default scope is "exclusive."
     
@@ -247,7 +248,9 @@ The default scope is "exclusive."
     
 Each item in the cache consists of a key and some data. 
 
-Data items may be Strings or Buffers. It is an error to insert any other
+The key must always be a string.
+
+Data items may be strings or Buffers. It is an error to insert any other
 data type.
 
 To be notified when the insert completes, and whether it is successful, pass
@@ -264,19 +267,18 @@ parameter will be an Error object.
       // It will be a Buffer or a String depending on what was inserted..
     });
     
-To retrieve an item, call the "get" function. It takes one parameter, which
+To retrieve an item, call the "get" function. The first parameter
 is the key that was used during "put". 
 
 The callback must be a function that takes two parameters:
 
 The first is an error -- if there is an error while retrieving from the 
-cache, then an Error object will be set here and otherwise this parameter
+cache, then an Error object will be set here. Otherwise this parameter
 will be set to "undefined".
-
 
 The second is the data retrieved, if any. It will be one of three values:
 
-* If a String was inserted, it will be a String.
+* If a string was inserted, it will be a string.
 * If a Buffer was inserted, it will be a Buffer.
 * If nothing was found, then it will be "undefined".
 
@@ -285,7 +287,14 @@ The second is the data retrieved, if any. It will be one of three values:
     var apigee = require('apigee-access');
     var cache = apigee.getCache();
     cache.remove('key');
-    
+
+This method invalidates the key. Like "put," it optionally takes a function
+as the second parameter, which will be called with an Error object
+as the first parameter if there is an error.
+
+Once a key is invalidated, subsequent "get" requests will return 
+"undefined" unless another value is inserted.
+
 ## Determining the Deployment Mode
 
     var apigee = require('apigee-access')
@@ -298,6 +307,6 @@ If it returns the string "apigee," then the application is running on Apigee
 Edge and all functionality is supported.
 
 If it returns the string "standalone," then the application is running outside
-the Apigee Edge environment.
+the Apigee Edge environment, and the default functionality described
+at the top of the document takes effect.
 
-    
