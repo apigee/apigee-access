@@ -81,6 +81,7 @@ The module supports the following functions:
 
     getVariable(request, name);
     setVariable(request, name, value);
+    setIntVariable(request, name, value);
     deleteVariable(request, name);
     getCache(name);
     getMode();
@@ -110,6 +111,10 @@ standard Node.js HTTP request objects, such as timestamps on the message.
     // "httpRequest" must be a request object that came from the http module
     var val1 = apigee.getVariable(request, 'TestVariable');
     var val2 = apigee.getVariable(request, 'request.client.ip');
+    
+The value may be a string or a number, depending on the type that was
+set using "setVariable," or if the variable is built in to Apigee, depending
+on the type of the built-in variable.
 
 ### Setting a variable
 
@@ -130,6 +135,8 @@ boolean, null, or undefined.
     var apigee = require('apigee-access');
     // Convert "123" to an integer and set it
     apigee.setIntVariable(request, 'TestVariable', '123');
+    // Use something that's already a number
+    apigee.setIntVariable(request, 'TestVariable2', 42);
     
 "setIntVariable" is a convenience method that first coerces "value" to an 
 integer, and then sets it. "value" must be a string or number.
@@ -162,7 +169,9 @@ These variables are supported here in order to support local development
 and testing of Node.js applications for Apigee Edge.
 
 Again, inside Apigee Edge, a much larger set of pre-defined variables is 
-supported -- please see the doc link above.
+supported -- please see here:
+
+(http://apigee.com/docs/api-services/api/variables-reference)[http://apigee.com/docs/api-services/api/variables-reference]
 
 <table>
 <tr><td><b>Variable</b></td><td><b>Read-Only</b></td><td><b>Type</b></td><td><b>Notes</b></td></tr>
@@ -173,7 +182,8 @@ supported -- please see the doc link above.
 </table>
 
 This module works outside Apigee mainly for testing purposes. Missing a variable 
-that you need for a test? It should be easy to add to this project.
+that you need for a test? Open a GitHub issue and we can add it, or send a 
+pull request.
 
 ## Cache
 
@@ -188,13 +198,14 @@ Apigee Edge API to manually create cache resources, or you can use the
 default resource.
 
 When this module is used outside Apigee Edge, the cache is stored in memory
-inside Node.js.
+inside Node.js. This support is provided primarily for testing purposes.
 
 ### Accessing a cache
 
     var apigee = require('apigee-access');
-    // Get access to the default cache, which is best for most purposes
-    // The cache still needs a name
+    // Look up the cache named "cache" and create it if necessary. The
+    // resulting cache uses a pre-defined set of configuration parameters
+    // that should be workable for most situations.
     var cache = apigee.getCache('cache');
     // Get access to a custom cache resource
     var customCache = apigee.getCache('MyCustomCache',
@@ -208,12 +219,13 @@ optional parameters:
 
 * resource: The name of an Apigee "cache resource" where the data should
 be stored. Cache resources are used to fine-tune memory allocation and
-other cache parameters. These are configured using the Apigee API. If not
+other cache parameters. If not
 specified, a default resource will be used. If the cache resource
-does not exist, then an error will be thrown.
+does not exist, then an error will be thrown. See below for more documentation
+in this feature.
 * scope: Specifies whether cache entries are prefixed to prevent collisions.
 Valid values are "global", "application," and "exclusive". These are
-defined below.
+defined below. The default scope is "exclusive."
 * defaultTtl: Specifies the default time to live for a cache entry, in
 seconds. If not specified then the default TTL in the cache resource
 will be used.
@@ -222,6 +234,11 @@ in seconds. The default 30 seconds. Latency-sensitive applications may
 wish to reduce this in order to prevent slow response times if the
 cache infrastructure is overloaded.
 
+For information about how to create a cache resource, see the product
+documentation:
+
+(http://apigee.com/docs/gateway-services/content/manage-caches-environment)[http://apigee.com/docs/gateway-services/content/manage-caches-environment]
+
 The following values are valid for the "scope" field:
 
 * global: All cache entries may be seen by all Node.js applications in the same
@@ -229,33 +246,31 @@ Apigee "environment."
 * application: All cache entries may be seen by all Node.js caches that
 are part of the same Apigee Edge application.
 * exclusive: Cache entries are only seen by Node.js caches in the same
-application that have the same name.
-
-The default scope is "exclusive."
+application that have the same name. This is the default.
     
 ### Inserting or Replacing an item
 
     var apigee = require('apigee-access');
     var cache = apigee.getCache();
-    // Insert a String with 'ascii' encoding and TTL in seconds
-    cache.put('key', 'Hello, World!', 'ascii', 120);
-    // Insert a string with default (UTF8) encoding
-    cache.put('key2', 'Hello, World!');
+    // Insert a string with a timeout of 120 seconds
+    cache.put('key2', 'Hello, World!', 120);
     // Insert a string and get notified when insert is complete
     cache.put('key4', 'Hello, World!', function(err) {
       // "err" will be undefined unless there was an error on insert
     });
     
-Each item in the cache consists of a key and some data. 
+"put" takes four parameters:
 
-The key must always be a string.
-
-Data items may be strings or Buffers. It is an error to insert any other
-data type.
-
-To be notified when the insert completes, and whether it is successful, pass
-a function as the last argument. If there is an error, then the first
-parameter will be an Error object.
+* key (required): A string that uniquely identifies the item in the cache.
+* data (required): A string, Buffer, or object that represents the data to cache.
+Any other data type will result in an error. For convenience, objects will
+be converted into a string using "JSON.stringify".
+* ttl (optional): The maximum time to persist the data in the cache, in
+seconds. If not specified then a default TTL will be used.
+* callback (optional): If specified, a function that will be called once the
+data is safely in the cache. It will be called with an Error object as the
+first parameter if there is an insertion error, and otherwise it will be
+called with no parameters.
 
 ### Retrieving an item 
 
@@ -267,8 +282,11 @@ parameter will be an Error object.
       // It will be a Buffer or a String depending on what was inserted..
     });
     
-To retrieve an item, call the "get" function. The first parameter
-is the key that was used during "put". 
+"get" takes two parameters:
+
+* "key" (required): A string that uniquely identifies the item in the cache.
+* "callback" (required): A function that will be called when the data
+is available. 
 
 The callback must be a function that takes two parameters:
 
@@ -276,10 +294,12 @@ The first is an error -- if there is an error while retrieving from the
 cache, then an Error object will be set here. Otherwise this parameter
 will be set to "undefined".
 
-The second is the data retrieved, if any. It will be one of three values:
+The second is the data retrieved, if any. It will be one of four values:
 
 * If a string was inserted, it will be a string.
 * If a Buffer was inserted, it will be a Buffer.
+* If an object was inserted, it will be a string containing the JSON
+version of the object as produced by "JSON.stringify".
 * If nothing was found, then it will be "undefined".
 
 ### Invalidating an Item

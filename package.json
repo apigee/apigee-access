@@ -1,6 +1,6 @@
 {
   "name": "apigee-access",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Gives access to Apigee-specific functionality for Node.js apps",
   "main": "lib/index.js",
   "scripts": {
