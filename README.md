@@ -23,7 +23,7 @@ to Apigee. For a more comprehensive set of tools that may be used in a
 variety of environments both inside and outside Apigee, please see our suite
 of "Volos" modules:
 
-(https://www.npmjs.org/search?q=volos)[https://www.npmjs.org/search?q=volos]
+[https://www.npmjs.org/search?q=volos](https://www.npmjs.org/search?q=volos)
 
 ### When Should I Use This?
 
@@ -159,7 +159,7 @@ You may of course add your own variables with your own names.
 
 The list of variables may be found here:
 
-(http://apigee.com/docs/api-services/api/variables-reference)[http://apigee.com/docs/api-services/api/variables-reference]
+[http://apigee.com/docs/api-services/api/variables-reference](http://apigee.com/docs/api-services/api/variables-reference)
 
 ## Running Outside Apigee
 
@@ -171,7 +171,7 @@ and testing of Node.js applications for Apigee Edge.
 Again, inside Apigee Edge, a much larger set of pre-defined variables is 
 supported -- please see here:
 
-(http://apigee.com/docs/api-services/api/variables-reference)[http://apigee.com/docs/api-services/api/variables-reference]
+[http://apigee.com/docs/api-services/api/variables-reference](http://apigee.com/docs/api-services/api/variables-reference)
 
 <table>
 <tr><td><b>Variable</b></td><td><b>Read-Only</b></td><td><b>Type</b></td><td><b>Notes</b></td></tr>
@@ -237,7 +237,7 @@ cache infrastructure is overloaded.
 For information about how to create a cache resource, see the product
 documentation:
 
-(http://apigee.com/docs/gateway-services/content/manage-caches-environment)[http://apigee.com/docs/gateway-services/content/manage-caches-environment]
+[http://apigee.com/docs/gateway-services/content/manage-caches-environment](http://apigee.com/docs/gateway-services/content/manage-caches-environment)
 
 The following values are valid for the "scope" field:
 
