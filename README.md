@@ -84,7 +84,8 @@ variable as follows:
 
 ## Methods
 
-The module supports the following methods. Note that some methods require a request object that came from the http module. 
+The module supports the following methods. Note that some methods require a request object that came from the http module.
+The methods are described in more detail in the following sections.
 
     getVariable(request, name);
     setVariable(request, name, value);
