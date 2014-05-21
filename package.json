@@ -1,7 +1,7 @@
 {
   "name": "apigee-access",
   "version": "1.0.0",
-  "description": "Gives access to Apigee-specific functionality for Node.js apps",
+  "description": "Provides access to Apigee-specific functionality",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha"

@@ -30,6 +30,9 @@ of "Volos" modules:
 When you are an Apigee Edge user who is combining the traditional policy-based
 configuration of an API proxy with Node.js code.
 
+When you are an Apigee Edge user who wants to take advantage of the built-in
+distributed cache available on the platform.
+
 ### When Should I Not Use This?
 
 If you are not deploying to Apigee Edge and not using the existing policy
