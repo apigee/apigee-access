@@ -4,7 +4,7 @@ The apigee-access module allows Node.js applications running on the Apigee Edge 
 a way to access Apigee-specific functionality. You can use this module to:
 
 * Access and modify "flow variables" within the Apigee message context.
-* Using the built-in distributed cache.
+* Use the built-in distributed cache.
 
 Use this module when you deploy a Node.js program to Apigee Edge to access Apigee-specific functionality. You can use it to 
 build an application that is optimized for Apigee Edge, or it may be used
