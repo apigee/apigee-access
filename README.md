@@ -73,7 +73,7 @@ variable as follows:
 
     http.createServer(function (request, response) {
       var userId = apigee.getVariable(request, 'AuthenticatedUserId');
-      console.log('Authenticated Apigee User ID is %s', userid);
+      console.log('Authenticated Apigee User ID is %s', userId);
       response.writeHead(200, {'Content-Type': 'text/plain'});
       response.end('Hello World\n');
     }).listen(8124);
