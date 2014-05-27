@@ -159,7 +159,7 @@ It is an error to delete a read-only variable. For a complete list of read-only 
 
     apigee.deleteVariable(request, 'TestVariable');
     // This will throw an exception
-    apigee.deleteVariable(request, 'client.ip', 'Invalid');
+    apigee.deleteVariable(request, 'client.ip');
     
 ## Pre-Defined Variables Within Apigee Edge
 
