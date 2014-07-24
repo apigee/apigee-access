@@ -5,17 +5,18 @@ a way to access Apigee-specific functionality. You can use this module to:
 
 * Access and modify "flow variables" within the Apigee message context.
 * Use the built-in distributed cache.
+* Use the built-in distributed quota service.
 
-Use this module when you deploy a Node.js program to Apigee Edge to access Apigee-specific functionality. You can use it to 
+Use this module when you deploy a Node.js program to Apigee Edge to access Apigee-specific functionality. You can use it to
 build an application that is optimized for Apigee Edge, or it may be used
 to build higher-level functionality.
 
-To support local development and testing, this module works in a 
+To support local development and testing, this module works in a
 local mode with no dependencies on Apigee functionality. When deployed to
 Apigee Edge, this functionality is replaced with native Apigee functionality.
 
 This module is intended for use by developers who intend to primarily deploy
-to Apigee. For a more comprehensive set of tools that may be used in a 
+to Apigee. For a more comprehensive set of tools that may be used in a
 variety of environments both inside and outside Apigee, please see our suite
 of "Volos" modules:
 
@@ -35,8 +36,7 @@ distributed cache available on the platform.
 
 Do not use this module:
 
-* If you are not deploying to Apigee Edge and not using the existing policy
-framework, then this module makes no sense.
+* If you are not deploying to Apigee Edge, then this module makes no sense.
 
 * If you don't know what we're talking about so far, then you don't need
 this module.
@@ -56,8 +56,11 @@ application deployed to Apigee Edge.
 application. A (small) set of pre-defined variables is also populated for
 testing.
 
-* *Cache*: Items in the cache are only visible to the current Node.js 
+* *Cache*: Items in the cache are only visible to the current Node.js
 application.
+
+* *Quota*: The quota service will fail with an error when deployed
+outside Apigee Edge.
 
 When creating an API proxy in Apigee, it is common to set
 variables that can be used to pass information from one policy to the next.
@@ -92,14 +95,17 @@ The methods are described in more detail in the following sections.
     setIntVariable(request, name, value);
     deleteVariable(request, name);
     getCache(name);
+    getQuota(options);
     getMode();
-   
+
 And the following constant properties:
 
     APIGEE_MODE = 'apigee';
     STANDALONE_MODE = 'standalone';
 
 ## Accessing Variables
+
+<i>Since 1.0.0</i>
 
 Variables are part of the flow of each message through the Apigee Edge product.
 Among other things, they represent the context between the different policies
@@ -123,7 +129,7 @@ For a complete list of predefined flow variables refer to the Apigee Edge [Varia
     // "httpRequest" must be a request object that came from the http module
     var val1 = apigee.getVariable(request, 'TestVariable');
     var val2 = apigee.getVariable(request, 'request.client.ip');
-    
+
 The value may be a string or a number, depending on the type that was
 set using "setVariable," or if the variable is built in to Apigee, depending
 on the type of the built-in variable.
@@ -138,7 +144,7 @@ to set one of them.
     apigee.setVariable(request, 'TestVariable', 'bar');
     // This will throw an exception
     apigee.setVariable(request, 'client.ip', 'Invalid');
-   
+
 For each variable, the key must be a string. The value may be a number, String,
 boolean, null, or undefined.
 
@@ -149,8 +155,8 @@ boolean, null, or undefined.
     apigee.setIntVariable(request, 'TestVariable', '123');
     // Use something that's already a number
     apigee.setIntVariable(request, 'TestVariable2', 42);
-    
-"setIntVariable" is a convenience method that first coerces "value" to an 
+
+"setIntVariable" is a convenience method that first coerces "value" to an
 integer, and then sets it. "value" must be a string or number.
 
 ### Deleting a variable
@@ -160,7 +166,7 @@ It is an error to delete a read-only variable. For a complete list of read-only 
     apigee.deleteVariable(request, 'TestVariable');
     // This will throw an exception
     apigee.deleteVariable(request, 'client.ip');
-    
+
 ## Pre-Defined Variables Within Apigee Edge
 
 You can find the link of supported variables at the following
@@ -187,11 +193,11 @@ and testing of Node.js applications for Apigee Edge.
 <tr><td>client.received.end.timestamp</td><td>Yes</td><td>Integer</td><td>Time at which the request was received</td></tr>
 </table>
 
-Again, on the Apigee Edge platform, a much larger set of pre-defined variables is 
+Again, on the Apigee Edge platform, a much larger set of pre-defined variables is
 supported -- please refer to the Apigee Edge [Variables Reference](http://apigee.com/docs/api-services/api/variables-reference).
 
-This module works outside Apigee mainly for testing purposes. Missing a variable 
-that you need for a test? Open a GitHub issue and we can add it, or send a 
+This module works outside Apigee mainly for testing purposes. Missing a variable
+that you need for a test? Open a GitHub issue and we can add it, or send a
 pull request.
 
 ## Working with the Cache
@@ -204,7 +210,7 @@ application executes.
 
 Configuration of the cache is managed via a "cache resource." You can use the
 Apigee Edge API to manually create cache resources, or you can use the
-default resource. 
+default resource.
 
 For an introduction to caching on Apigee Edge, refer to the  [Persistence](http://apigee.com/docs/gateway-services/content/persistence) documentation topic on the Apigee Edge website.
 
@@ -220,8 +226,8 @@ inside Node.js. This support is provided primarily for testing purposes.
     var cache = apigee.getCache('cache');
     // Get access to a custom cache resource
     var customCache = apigee.getCache('MyCustomCache',
-      { resource: 'MyCustomrResource'} ); 
-    
+      { resource: 'MyCustomrResource'} );
+
 To use a cache, call "getCache". This takes a name, and an optional
 configuration object.
 
@@ -260,7 +266,7 @@ are part of the same Apigee Edge application.
 
 * **exclusive**: Cache entries are only seen by Node.js caches in the same
 application that have the same name. This is the default.
-    
+
 ### Inserting or Replacing an item
 
     var apigee = require('apigee-access');
@@ -271,7 +277,7 @@ application that have the same name. This is the default.
     cache.put('key4', 'Hello, World!', function(err) {
       // "err" will be undefined unless there was an error on insert
     });
-    
+
 "put" takes four parameters:
 
 * **key** (required): A string that uniquely identifies the item in the cache.
@@ -288,7 +294,7 @@ data is safely in the cache. It will be called with an Error object as the
 first parameter if there is an insertion error, and otherwise it will be
 called with no parameters.
 
-### Retrieving an item 
+### Retrieving an item
 
     var apigee = require('apigee-access');
     var cache = apigee.getCache();
@@ -297,17 +303,17 @@ called with no parameters.
       // "data" is the item that was retrieved
       // It will be a Buffer or a String depending on what was inserted..
     });
-    
+
 "get" takes two parameters:
 
 * **key** (required): A string that uniquely identifies the item in the cache.
 
 * **callback** (required): A function that will be called when the data
-is available. 
+is available.
 
 The callback must be a function that takes two parameters:
 
-The first is an error -- if there is an error while retrieving from the 
+The first is an error -- if there is an error while retrieving from the
 cache, then an Error object will be set here. Otherwise this parameter
 will be set to "undefined".
 
@@ -329,8 +335,121 @@ This method invalidates the key. Like "put," it optionally takes a function
 as the second parameter, which will be called with an Error object
 as the first parameter if there is an error.
 
-Once a key is invalidated, subsequent "get" requests will return 
+Once a key is invalidated, subsequent "get" requests will return
 "undefined" unless another value is inserted.
+
+## Using the Quota Service
+
+The quota service is set up to give direct access to the quota service built
+in to Apigee Edge. Here is an example of how it is used:
+
+    var apigee = require('apigee-access');
+    var quota = apigee.getQuota();
+    quota.apply({ identifier: 'Foo', allow: 10, timeUnit: 'hour' },
+                function(err, result) {
+                  console.log('Quota applied: %j', result);
+                });
+
+### Getting access to the Quota object
+
+To get access to the Quota object, call "getQuota()".
+
+### Incrementing the quota
+
+To increment the quota value, call "getQuota()" to get an instance of the Quota
+object, and then call "apply." The first argument to "apply" is an object
+that may contain the following fields:
+
+* identifier (string, required): A unique identifier of the quota bucket. In
+practice it might be an application ID, IP address, or username.
+* timeUnit (string, required): How long the quota bucket will accumulate until
+if is reset. Valid values are "minute," "hour," "day," "week," and "month."
+* allow (number, required): The maximum value for the quota bucket. This value
+will be combined with the current value to return whether the quota has succeeded.
+* interval (number, optional): Combined with the "timeUnit" to determine how
+long before the quota is reset. The default is 1. Set to a larger value to allow
+quotas such as "two hours," "three weeks," and so on.
+* weight (number, optional): The value to increment the quota by. Default is 1.
+
+The second argument to "apply" is a function that takes two arguments. The
+first will be an Error object if the quota cannot be incremented, or undefined
+if the operation succeeded.
+
+The second is an object that will contain the following fields:
+
+* used (number): The current value of the quota bucket.
+* allowed (number): The maximum value of the quota bucket before the
+quota is considered to be exceeded. The same value was passed as "allow" in
+the request object.
+* isAllowed (boolean): If there is room left in the quota -- true as long
+as "used" is less than or equal to "allowed."
+* expiryTime (long): The timestamp, in milliseconds since 1970 format,
+when the quota bucket will be reset.
+* timestamp (long): The timestamp at which the quota was updated.
+
+For example:
+
+    var apigee = require('apigee-access');
+    var quota = apigee.getQuota();
+
+    // Apply a quota of 100 requests per hour
+    quota.apply({
+      identifier: 'Foo',
+      timeUnit: 'hour',
+      allow: 100
+    }, quotaResult);
+
+    // Apply a quota of 500 requests per five minutes
+    quota.apply({
+      identifier: 'Bar',
+      timeUnit: 'minute',
+      interval: 5,
+      allow: 500
+    }, quotaResult);
+
+    // Increment the quota by a value of 10
+    quota.apply({
+      identifier: 'Foo',
+      timeUnit: 'hour',
+      allow: 100,
+      weight: 10
+    }, quotaResult);
+
+    function quotaResult(err, r) {
+      if (err) { console.error('Quota failed'); }
+    }
+
+### Resetting the quota
+
+To reset the quota to zero, call "reset." Reset takes an options
+argument, the same as apply, and many of the same parameters:
+
+* identifier (string, required): A unique identifier of the quota bucket. In
+practice it might be an application ID, IP address, or username.
+* timeUnit (string, required): How long the quota bucket will accumulate until
+if is reset. Valid values are "minute," "hour," "day," "week," and "month."
+* interval (number, optional): Combined with the "timeUnit" to determine how
+long before the quota is reset. The default is 1. Set to a larger value to allow
+
+The second argument is a callback that will have an Error object as the first
+parameter if the reset fails.
+
+### Advanced Usage
+
+When creating a quota, an optional "options" object may be included. This object
+has one optional parameter:
+
+* syncInterval (number, optional): The number of seconds that the distributed
+quota implementation syncs its state across the network. The default is 10.
+
+This parameter may be used to optimize performance of the distributed quota
+across the network. Keep in mind that a lower setting will degrade performance
+and dramatically increase the latency of the "apply" operation. The default
+setting of 10 seconds is a good setting for many applications.
+
+The interval may be set as low as zero, which means that the state is
+synchronized every time "apply" is called. Performance will be much, much worse
+in this case.
 
 ## Determining the Deployment Mode
 
@@ -338,7 +457,7 @@ As mentioned previously, you can use this module in an application that is deplo
 
     var apigee = require('apigee-access')
     console.log('The deployment mode is ' + apigee.getMode());
-    
+
 The getMode() method returns a string that determines where the module has been
 deployed.
 
