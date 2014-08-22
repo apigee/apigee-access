@@ -4,10 +4,13 @@ The apigee-access module allows Node.js applications running on the Apigee Edge 
 a way to access Apigee-specific functionality. You can use this module to:
 
 * Access and modify "flow variables" within the Apigee message context.
+* Retrieve sensitive data from the the secure store.
 * Use the built-in distributed cache.
 * Use the built-in distributed quota service.
+* Use the OAuth service.
 
-Use this module when you deploy a Node.js program to Apigee Edge to access Apigee-specific functionality. You can use it to
+Use this module when you deploy a Node.js program to Apigee Edge to access
+Apigee-specific functionality. You can use it to
 build an application that is optimized for Apigee Edge, or it may be used
 to build higher-level functionality.
 
@@ -30,7 +33,7 @@ Use this module:
 configuration of an API proxy with Node.js code.
 
 * When you are an Apigee Edge user who wants to take advantage of the built-in
-distributed cache available on the platform.
+distributed cache, quota, OAuth, and analytics available on the platform.
 
 ### When Should I Not Use This?
 
@@ -59,13 +62,19 @@ testing.
 * *Cache*: Items in the cache are only visible to the current Node.js
 application.
 
-* *Quota*: The quota service will fail with an error when deployed
+* *Secure Store*: The secure store service will fail with an error when
+used outside Apigee Edge.
+
+* *Quota*: The quota service will fail with an error when used
 outside Apigee Edge.
+
+* *OAuth*: The OAuth service will fail with an error when used
+outside Apigee Edge.
+
+## Example
 
 When creating an API proxy in Apigee, it is common to set
 variables that can be used to pass information from one policy to the next.
-
-## Example
 
 Imagine that an Edge policy running on the request path has set a variable
 called "AuthenticatedUserId". Using this module, you may access that
@@ -200,7 +209,28 @@ This module works outside Apigee mainly for testing purposes. Missing a variable
 that you need for a test? Open a GitHub issue and we can add it, or send a
 pull request.
 
+## Determining the Deployment Mode
+
+As mentioned previously, you can use this module in an application that is
+deployed to Apigee Edge or in standalone mode on your local machine. To
+determine which mode you are running in:
+
+    var apigee = require('apigee-access')
+    console.log('The deployment mode is ' + apigee.getMode());
+
+The getMode() method returns a string that determines where the module has been
+deployed.
+
+If it returns the string "apigee," then the application is running on Apigee
+Edge and all functionality is supported.
+
+If it returns the string "standalone," then the application is running outside
+the Apigee Edge environment, and the default functionality described
+at the top of the document takes effect.
+
 ## Working with the Cache
+
+<i>Since 1.1.0</i>
 
 The cache may be used to store strings or data. Like most caches, it is a
 least-recently-used cache with a maximum size.
@@ -216,6 +246,12 @@ For an introduction to caching on Apigee Edge, refer to the  [Persistence](http:
 
 When this module is used outside of Apigee Edge, the cache is stored in memory
 inside Node.js. This support is provided primarily for testing purposes.
+
+This module provides low-level cache access, and only works on Apigee Edge.
+For a more comprehensive cache implementation that can work on a variety of
+environments, use Volos:
+
+[volos-cache-apigee](https://www.npmjs.org/package/volos-cache-apigee)
 
 ### Accessing a cache
 
@@ -338,7 +374,141 @@ as the first parameter if there is an error.
 Once a key is invalidated, subsequent "get" requests will return
 "undefined" unless another value is inserted.
 
+## Using the Secure Store
+
+<i>Since 1.2.0</i>
+
+The secure store service is a feature of Apigee Edge that allows sensitive
+data, such as security credentials for back-end services, to be stored in
+encrypted format so that they are protected from unauthorized use.
+
+For example, the secure store may be used to store a password required by
+a Node.js application in order to reach a protected resource, such as a
+database server. The developer of the application can store the password
+in the secure store via API before deployment, and the application can look
+up the value at runtime.
+
+By doing this, there is therefore no need to include the password in the source
+code control system, or to deploy it alonside the Node.js source code to Apigee.
+Instead, the value is stored by Apigee in encrypted form and it will only be
+retrieved when the application needs it.
+
+Each Apigee Edge "organization" has a set of secure stores, and each environment
+has an additional store. That way organizations that have different security
+requirements for different back ends can store different secure values.
+
+### Storing data in the Secure Store by Organization
+
+Data is stored in the secure store using the Apigee Edge management API:
+
+    GET /o/{organization}/vaults
+
+Retrieve the names of all the secure stores.
+
+    GET /o/{organization}/vaults/{name}
+
+Retrieve a list of entries (but not their encrypted values) from a named vault.
+
+    GET /o/{organization}/vaults/{name}/entries/{entryname}
+
+Retrieve a single entry (but not its encrypted value).
+
+    POST /o/{organization}/vaults
+
+    { "name": "{name}" }
+
+    curl https://api.enterprise.apigee.com/v1/o/testorg/vaults
+      -H "Content-Type: application/json"
+      -d '{"name": "test2" }' -X POST
+
+Create a new vault named "name" with no values
+
+    POST /o/{organization}/vaults/{vaultname}/entries
+
+    { "name": "{entryname}", "value": "{securevalue}" }
+
+    curl https://api.enterprise.apigee.com/v1/o/testorg/vaults/test2/entries
+      -H "Content-Type: application/json"
+      -d '{"name": "value1", "value": "verysecret" }' -X POST
+
+Place a new entry in the vault with the specified name and secure value.
+
+    PUT /o/{organization}/vaults/{vaultname}/entries/{entryname}
+
+    curl https://api.enterprise.apigee.com/v1/o/testorg/vaults/test2/entries/value1
+      -d 'verymoresecret' -X PUT
+
+Replace the value of the specified entry with a new value
+
+    POST /o/{organization}/vaults/{vaultname}/entries/{entryname}?action=verify
+
+    curl https://api.enterprise.apigee.com/v1/o/testorg/vaults/test2/entries/value1?action=verify
+      -d 'verymoresecret'  -X POST
+
+Return "true" if the specified value matches what is already in the store, and
+"false" if it does not. In both cases, an HTTP status code of 200 is used.
+This may be used to validate the contents of the store. Note that once stored,
+there is no API to retrieve the unencrypted value.
+
+    DELETE /o/{organization}/vaults/{vaultname}/entries/{entryname}
+
+Delete the specified vault entry
+
+    DELETE /o/{organization}/vaults/{name}
+
+Delete the entire vault.
+
+### Storing data by Environment
+
+The above API may also be invokoed on the "environment" path. In that case,
+the data is qualified by environment. This way, at runtime different
+values may be stored depending on where the Node.js script is running:
+
+    GET /o/{organization}/vaults
+    GET /o/{organization}/vaults/{name}
+    GET /o/{organization}/vaults/{name}/entries/{entryname}
+    POST /o/{organization}/vaults
+    POST /o/{organization}/vaults/{vaultname}/entries
+    PUT /o/{organization}/vaults/{vaultname}/entries/{entryname}
+    POST /o/{organization}/vaults/{vaultname}/entries/{entryname}?action=verify
+    DELETE /o/{organization}/vaults/{vaultname}/entries/{entryname}
+    DELETE /o/{organization}/vaults/{name}
+
+### Retrieving values from the Secure Store
+
+The "getVault" method is used to retrieve a particular vault, either per
+organization or based on the current environment where the Node.js code is
+running.
+
+"getVault" takes two parameters:
+
+* The name of the vault to retrieve.
+* The "scope," which may be "organization" or "environment." If not specified,
+then "organization" is assumed.
+
+The object returned by "getVault" has two methods:
+
+* getKeys(callback): Return an array containing the names of all the keys in
+the specified vault. The "callback" function will be called with two
+arguments: An error if the operation fails, or "undefined" if it does
+not, and the actual array as the second argument.
+
+* get(key, callback): Return the secure value associated with a particular
+key. The "callback" function will be called with two
+arguments: An error if the operation fails, or "undefined" if it does
+not, and the actual value as the second argument.
+
+### Example
+
+    var apigee = require('apigee-access');
+    var orgVault = apigee.getVault('vault1', 'organization');
+    orgVault.get('key1', function(err, secretValue) {
+      // use the secret value here
+    });
+
 ## Using the Quota Service
+
+<i>Since 1.2.0</i>
 
 The quota service is set up to give direct access to the quota service built
 in to Apigee Edge. Here is an example of how it is used:
@@ -349,6 +519,12 @@ in to Apigee Edge. Here is an example of how it is used:
                 function(err, result) {
                   console.log('Quota applied: %j', result);
                 });
+
+The quota service is a low-level object that works only inside Apigee Edge.
+For a more comprehensive quota implementation that can work in many
+environments, use Volos:
+
+[volos-quota-apigee](https://www.npmjs.org/package/volos-quota-apigee)
 
 ### Getting access to the Quota object
 
@@ -451,19 +627,16 @@ The interval may be set as low as zero, which means that the state is
 synchronized every time "apply" is called. Performance will be much, much worse
 in this case.
 
-## Determining the Deployment Mode
+## Using the OAuth Service
 
-As mentioned previously, you can use this module in an application that is deployed to Apigee Edge or in standalone mode on your local machine. To determine which mode you are running in:
+<i>Since 1.2.0</i>
 
-    var apigee = require('apigee-access')
-    console.log('The deployment mode is ' + apigee.getMode());
+This module provides a low-level interface for getting access to the OAuth
+service built in to Apigee Edge. It is fully functional but it is not
+designed to be a complete OAuth 2.0 implementation out of the box.
+For this purpose, use Volos:
 
-The getMode() method returns a string that determines where the module has been
-deployed.
+[volos-oauth-apigee](https://www.npmjs.org/package/volos-oauth-apigee)
 
-If it returns the string "apigee," then the application is running on Apigee
-Edge and all functionality is supported.
-
-If it returns the string "standalone," then the application is running outside
-the Apigee Edge environment, and the default functionality described
-at the top of the document takes effect.
+Volos will automatically detect if this module is present and use it for
+better OAuth performance when it is available.
