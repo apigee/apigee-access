@@ -4,7 +4,7 @@ The apigee-access module allows Node.js applications running on the Apigee Edge 
 a way to access Apigee-specific functionality. You can use this module to:
 
 * Access and modify "flow variables" within the Apigee message context.
-* Retrieve sensitive data from the the secure store.
+* Retrieve sensitive data from the the secure store (AKA "vault").
 * Use the built-in distributed cache.
 * Use the built-in distributed quota service.
 * Use the OAuth service.
@@ -460,7 +460,7 @@ Delete the entire vault.
 
 ### Storing data by Environment
 
-The above API may also be invokoed on the "environment" path. In that case,
+The above API may also be invoked on the "environment" path. In that case,
 the data is qualified by environment. This way, at runtime different
 values may be stored depending on where the Node.js script is running:
 
