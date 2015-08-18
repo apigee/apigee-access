@@ -31,9 +31,9 @@ Use this module:
 
 * When you are an Apigee Edge user who is combining the traditional policy-based
 configuration of an API proxy with Node.js code.
-
 * When you are an Apigee Edge user who wants to take advantage of the built-in
 distributed cache, quota, OAuth, and analytics available on the platform.
+* If you wish to use Apigee Edge's secure storage Vaults ([more info](http://apigee.com/docs/api-services/content/using-secure-store)).
 
 ### When Should I Not Use This?
 
@@ -498,13 +498,35 @@ key. The "callback" function will be called with two
 arguments: An error if the operation fails, or "undefined" if it does
 not, and the actual value as the second argument.
 
-### Example
+### Example 1 (simple case)
 
     var apigee = require('apigee-access');
     var orgVault = apigee.getVault('vault1', 'organization');
     orgVault.get('key1', function(err, secretValue) {
       // use the secret value here
     });
+    
+### Example 2 (retrieve a token from vault when running on Edge or pass via command line when working locally)
+```
+var apigee = require('apigee-access');
+var token = "";
+
+if (apigee.getMode() === 'apigee') {  // test to see if running on Edge
+	var orgVault = apigee.getVault('gitlab', 'organization'); 
+	orgVault.get('token', function(err, secretValue) {
+		if (err) {
+			console.log(err);
+			next(err);
+		} else {
+			token = secretValue;
+		}
+	});
+} else {
+	if (process.argv[2]) { // if local, grab from token command line arguments
+		token = process.argv[2];
+	}
+}
+```
 
 ## Using the Quota Service
 
